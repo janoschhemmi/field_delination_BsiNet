@@ -1,0 +1,48 @@
+<VRTDataset rasterXSize="256" rasterYSize="256">
+  <SRS dataAxisToSRSAxisMapping="1,2">PROJCS["WGS 84 / Pseudo-Mercator",GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563,AUTHORITY["EPSG","7030"]],AUTHORITY["EPSG","6326"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4326"]],PROJECTION["Mercator_1SP"],PARAMETER["central_meridian",0],PARAMETER["scale_factor",1],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],EXTENSION["PROJ4","+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 +units=m +nadgrids=@null +wktext +no_defs"],AUTHORITY["EPSG","3857"]]</SRS>
+  <GeoTransform>  3.3769496906621833e+06,  4.7773142671600004e+00,  0.0000000000000000e+00, -1.7458694988710296e+05,  0.0000000000000000e+00, -4.7773142671600004e+00</GeoTransform>
+  <VRTRasterBand dataType="UInt16" band="1">
+    <NoDataValue>0</NoDataValue>
+    <ComplexSource>
+      <SourceFilename relativeToVRT="0">/home/hemmerling/projects/field_delination_BsiNet/data/nasa_rwanda_field_boundary_competition/nasa_rwanda_field_boundary_competition_source_train/nasa_rwanda_field_boundary_competition_source_train_05_2021_11/B01.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SourceProperties RasterXSize="256" RasterYSize="256" DataType="UInt16" BlockXSize="256" BlockYSize="16" />
+      <SrcRect xOff="0" yOff="0" xSize="256" ySize="256" />
+      <DstRect xOff="0" yOff="0" xSize="256" ySize="256" />
+      <NODATA>0</NODATA>
+    </ComplexSource>
+  </VRTRasterBand>
+  <VRTRasterBand dataType="UInt16" band="2">
+    <NoDataValue>0</NoDataValue>
+    <ComplexSource>
+      <SourceFilename relativeToVRT="0">/home/hemmerling/projects/field_delination_BsiNet/data/nasa_rwanda_field_boundary_competition/nasa_rwanda_field_boundary_competition_source_train/nasa_rwanda_field_boundary_competition_source_train_05_2021_11/B02.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SourceProperties RasterXSize="256" RasterYSize="256" DataType="UInt16" BlockXSize="256" BlockYSize="16" />
+      <SrcRect xOff="0" yOff="0" xSize="256" ySize="256" />
+      <DstRect xOff="0" yOff="0" xSize="256" ySize="256" />
+      <NODATA>0</NODATA>
+    </ComplexSource>
+  </VRTRasterBand>
+  <VRTRasterBand dataType="UInt16" band="3">
+    <NoDataValue>0</NoDataValue>
+    <ComplexSource>
+      <SourceFilename relativeToVRT="0">/home/hemmerling/projects/field_delination_BsiNet/data/nasa_rwanda_field_boundary_competition/nasa_rwanda_field_boundary_competition_source_train/nasa_rwanda_field_boundary_competition_source_train_05_2021_11/B03.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SourceProperties RasterXSize="256" RasterYSize="256" DataType="UInt16" BlockXSize="256" BlockYSize="16" />
+      <SrcRect xOff="0" yOff="0" xSize="256" ySize="256" />
+      <DstRect xOff="0" yOff="0" xSize="256" ySize="256" />
+      <NODATA>0</NODATA>
+    </ComplexSource>
+  </VRTRasterBand>
+  <VRTRasterBand dataType="UInt16" band="4">
+    <NoDataValue>0</NoDataValue>
+    <ComplexSource>
+      <SourceFilename relativeToVRT="0">/home/hemmerling/projects/field_delination_BsiNet/data/nasa_rwanda_field_boundary_competition/nasa_rwanda_field_boundary_competition_source_train/nasa_rwanda_field_boundary_competition_source_train_05_2021_11/B04.tif</SourceFilename>
+      <SourceBand>1</SourceBand>
+      <SourceProperties RasterXSize="256" RasterYSize="256" DataType="UInt16" BlockXSize="256" BlockYSize="16" />
+      <SrcRect xOff="0" yOff="0" xSize="256" ySize="256" />
+      <DstRect xOff="0" yOff="0" xSize="256" ySize="256" />
+      <NODATA>0</NODATA>
+    </ComplexSource>
+  </VRTRasterBand>
+</VRTDataset>
