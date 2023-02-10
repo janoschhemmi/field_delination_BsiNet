@@ -6,10 +6,15 @@ import glob
 import os
 from sklearn.model_selection import train_test_split
 import torch 
+from torch import nn
 
 from utils.losses import LossBsiNet
 from utils.general_utils import visualize, create_train_arg_parser,evaluate
-from models.BsiNe
+from models.BsiNet import BsiNet_2, BsiNet
+#from utils.data_sets import DatasetImageMaskContourDist
+from utils.data_sets import readTif
+
+
 
 
 
@@ -24,6 +29,9 @@ def build_model(model_type):
 
     if model_type == "bsinet":
         model = BsiNet(num_classes=2)
+
+    if model_type == "bsinet_2":
+        model = BsiNet_2(input_channels = 4, num_classes=2)
 
     return model
 
@@ -60,11 +68,15 @@ if __name__ == "__main__":
 
     args = argparse.ArgumentParser(description="train setup for segmentation")
 
-    args.model_type = "bsinet"
+    args.model_type = "bsinet_2"
     args.test_path = "path to test"
     args.model_file = "file "
     args.save_path = "path "
     args.cuda_no = "no"
+
+    ## optional load of pretrained models from disk 
+    args.use_pretrained = False
+    # args.pretrained_model_path = './best_merge_model_article/85.pt'
 
     
     
@@ -75,19 +87,6 @@ if __name__ == "__main__":
     args.save_path = './model'
     args.object_type = "duno"
 
-   
-    print(args.train_path)
-
-    """    
-    logging.basicConfig(
-        filename="".format(args.object_type),
-        filemode="a",
-        format="%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s",
-        datefmt="%Y-%m-%d %H:%M",
-        level=logging.INFO,
-    )
-    logging.info("")"""
-
 
     train_file_names = glob.glob(os.path.join(args.train_path, "*.tif"), recursive=False)
     val_file_names = glob.glob(os.path.join(args.val_path, "*.tif"))
@@ -96,9 +95,31 @@ if __name__ == "__main__":
     print(img_ids)
     train_file, val_file = train_test_split(img_ids, test_size=0.2, random_state=41)
 
+    ## set cuda device 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
 
+    ## load model 
     model = build_model(args.model_type)
+    if torch.cuda.device_count() > 0:           #本来是0
+        print("Let's use", torch.cuda.device_count(), "GPUs!")
+        model = nn.DataParallel(model)
+    model = model.to(device)
+
+    ### Load pretrained model if stated 
+    epoch_start = "0"
+    if args.use_pretrained:
+        print("Loading Model {}".format(os.path.basename(args.pretrained_model_path)))
+        model.load_state_dict(torch.load(args.pretrained_model_path))            #加了False
+        epoch_start = os.path.basename(args.pretrained_model_path).split(".")[0]
+        print(epoch_start)
+
+
+    #trainLoader = DataLoader(
+    #    DatasetImageMaskContourDist(args.train_path,train_file, args.distance_type),
+    #    batch_size=args.batch_size,drop_last=False,  shuffle=True
+    #    )
+
+
 
 # %%

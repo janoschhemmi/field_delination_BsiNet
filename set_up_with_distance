@@ -1,0 +1,164 @@
+# %%
+from pathlib import Path
+import glob
+import radiant_mlhub
+import osgeo
+from osgeo import gdal
+from radiant_mlhub import Dataset
+from shutil import copyfile
+import rasterio as rio
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+import random
+import os 
+
+from utils.augmentation_functions import normalize_per_band_and_scene, normalize_per_global_band_percentiles
+from utils.augmentation_functions import a_brightness, a_adjust_contrast, a_adjust_sharpness, a_resized_crop, a_hor_flip, a_ver_flip
+from utils.general_utils import create_mem_ds, copy_mem_ds
+
+import torchvision.transforms.functional as TF
+import torchvision.transforms as tran
+from PIL import Image
+
+
+
+## set all seeds that you can find ;)
+torch.use_deterministic_algorithms(True)
+random.seed(20)
+torch.manual_seed(20)
+np.random.seed(20)
+
+## globals 
+dataset_id = 'nasa_rwanda_field_boundary_competition'
+project_path = Path.home()  / 'projects' / 'field_delination_BsiNet'
+
+## download data?
+download_data = False
+
+## download data
+if download_data:
+    nasa_rwanda_field_boundary_competition = Dataset.fetch_by_id(dataset_id)
+    nasa_rwanda_field_boundary_competition.download(output_dir=project_path / 'data')
+
+# %% stack images
+root_pth_scenes =     f'{project_path}/data/{dataset_id}/{dataset_id}_source_train'
+root_pth_scenes_out = f'{project_path}/data_prepocessed/train'
+root_pth_masks =      f'{project_path}/data/{dataset_id}/{dataset_id}_labels_train'
+root_pth_masks_out =  f'{project_path}/data_preprocessed/mask'
+
+
+folders = sorted([d for d in next(os.walk(root_pth_scenes))[1]])
+
+
+## define Augmentation routines 
+## for each scene id same augmentation 
+aug_1 = {'rot': 1, 'brightness': 1, 'adjust_contrast': 1,'adjust_sharpness': 1, 
+            'resize_crop': [10,10,236,236], 'hor_flip': True, 'ver_flip': True, 'aug_name': "_a62_"}
+
+aug_2 = {'rot': 2, 'brightness': 1.1, 'adjust_contrast': 0.9,'adjust_sharpness': 1.05, 
+            'resize_crop': [20,20,226,226], 'hor_flip': False, 'ver_flip': True, 'aug_name': "_a63_"}
+    
+aug_3 = {'rot': 3, 'brightness': 1.1, 'adjust_contrast': 0.85,'adjust_sharpness': 0.95, 
+            'resize_crop': [5,5,220,220], 'hor_flip': True, 'ver_flip': False, 'aug_name': "_a64_"}
+    
+aug_4 = {'rot': 2, 'brightness': 0.95, 'adjust_contrast': 1.1,'adjust_sharpness': 1.2, 
+            'resize_crop': [30,30,200,200], 'hor_flip': True, 'ver_flip': True, 'aug_name': "_a65_"}
+    
+##  get mean and std 
+"""import csv
+with open('/home/hemmerling/projects/field_delination_BsiNet/stats_data.csv',  newline='') as csvfile:
+
+    spamreader = csv.reader(csvfile)
+    for row in spamreader:
+
+        print(row)"""
+
+means =[140.94676311195445, 140.21714745070798, 205.48892510237937, 515.361331418026]
+stds = [488.46370001006545, 835.3087745800353, 885.8593736168934, 3051.836265073185]
+
+
+
+# %%
+# stack original images in new augmentation folder 
+for j, folder in enumerate(folders[1:3]):
+
+    date_time  = folder[-7:]
+    tile_id    = folder[-10:-8]
+
+    full_path_scenes_in  = f'{root_pth_scenes}/{folder}'
+    full_path_scenes_out = f'{root_pth_scenes_out}/image/'
+
+    files = sorted(glob.glob(full_path_scenes_in+r'/*.tif'))
+    
+    ## get transforms 
+    dataset  = gdal.Open(files[1])
+    geotrans = dataset.GetGeoTransform()  
+    proj     = dataset.GetProjection()
+
+    op = osgeo.gdal.BuildVRTOptions(separate=True)
+
+    if not os.path.isdir(full_path_scenes_out):
+        os.makedirs(full_path_scenes_out)
+   
+    ## _a60_ --> original scene 
+    full_file_path_scenes_out = full_path_scenes_out + '/'+ tile_id +'_' + date_time + '_a60_.tif'
+    vrt_path = full_path_scenes_out + '/'+ tile_id +'_' + date_time + '_a60_.vrt'
+    
+    vrt = gdal.BuildVRT(vrt_path, files, options=op)
+    del vrt 
+
+    ## open vrt 
+    vrt_image = rio.open(vrt_path).read()
+    
+    ## scale to 0-1 
+    vrt_image = vrt_image / 10000
+
+    ## standardize
+    for i in range(4):
+        print(i) 
+
+        mean  = means[i] / 10000
+        std   = stds[i] / 10000
+
+        vrt_image[i,:,:] = (vrt_image[i,:,:] - mean) / std 
+
+
+    ## safe to floats
+    im_bands, im_height, im_width = vrt_image.shape
+    driver   = gdal.GetDriverByName("GTiff")
+    datatype = gdal.GDT_Float32
+    dataset  = driver.Create(full_file_path_scenes_out, int(im_width), int(im_height), int(im_bands), datatype)
+    dataset.SetGeoTransform(geotrans)  # set geotrans
+    dataset.SetProjection(proj) 
+
+    for i in range(4):
+           dataset.GetRasterBand(i + 1).WriteArray(vrt_image[i])
+    del dataset
+
+
+     ## copy mask 
+    mask_folder_in  = folder.replace("source", "labels")
+  
+    
+    full_path_mask_in  = f'{root_pth_masks}/{mask_folder_in}'
+    full_path_mask_out = f'{root_pth_masks_out}/'
+
+    if not os.path.isdir(full_path_mask_out):
+        os.makedirs(full_path_mask_out)
+
+    mask_file_path_out = f"{full_path_mask_out}/{tile_id}_{date_time}_a60_.tif"
+
+    full_path_mask_in_2 = full_path_mask_in[:-8]
+    dada = rio.open(f"{full_path_mask_in_2}/raster_labels.tif").read()
+
+    min_mask = np.min(dada)
+    max_mask = np.max(dada)
+
+    print(min_mask)
+    print(max_mask)
+
+
+    #copyfile(f"{full_path_mask_in}/raster_labels.tif", mask_file_path_out )
+
+# %%

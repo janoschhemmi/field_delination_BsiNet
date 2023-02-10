@@ -113,3 +113,98 @@ def create_validation_arg_parser():
 
     return 
 # %%
+
+
+import os
+import rasterio as rio 
+import numpy as np 
+from pathlib import Path
+import matplotlib as plt 
+import gdal
+
+
+def clean_string(s: str, dataset_id: str) -> str:
+    """
+    extract the tile id and timestamp from a source image folder
+    e.g extract 'ID_YYYY_MM' from 'nasa_rwanda_field_boundary_competition_source_train_ID_YYYY_MM'
+    """
+    s = s.replace(f"{dataset_id}_source_", '').split('_')[1:]
+    return '_'.join(s)
+
+# create dataset in memory using geotransform specified in ref_pth
+def create_mem_ds(ref_pth, n_bands, dtype=gdal.GDT_Float32):
+  print('creating empty raster \n copying geotransform of' + ref_pth)
+  drvMemR = gdal.GetDriverByName('MEM')
+  ds = gdal.Open(ref_pth)
+  mem_ds = drvMemR.Create('', ds.RasterXSize, ds.RasterYSize, n_bands, dtype)
+  mem_ds.SetGeoTransform(ds.GetGeoTransform())
+  mem_ds.SetProjection(ds.GetProjection())
+  return mem_ds
+
+# create copy
+def copy_mem_ds(pth, mem_ds):
+  copy_ds = gdal.GetDriverByName("GTiff").CreateCopy(pth, mem_ds, 0, options=['COMPRESS=LZW'])
+  copy_ds = None
+
+  
+def read_bands_and_mask_of_scene(
+    train_source_scenes_path = str,
+    dataset_id = str,
+    scene_id_tile_and_time = str,
+    train_label_path = str
+):
+    """
+    returns stacked scene and ref mask 
+    """
+    from utils.augmentation_functions import normalize_per_band_and_scene
+
+    path_to_scene = f"{train_source_scenes_path}/{dataset_id}_source_train_{scene_id_tile_and_time}"
+    bd1 = rio.open(f"{path_to_scene}/B01.tif")
+    bd1_array = bd1.read(1)
+    bd2 = rio.open(f"{path_to_scene}/B02.tif")
+    bd2_array = bd2.read(1)
+    bd3 = rio.open(f"{path_to_scene}/B03.tif")
+    bd3_array = bd3.read(1)
+    bd4 = rio.open(f"{path_to_scene}/B04.tif")
+    bd4_array = bd4.read(1)
+    b01_norm = normalize_per_band_and_scene(bd1_array)
+    b02_norm = normalize_per_band_and_scene(bd2_array)
+    b03_norm = normalize_per_band_and_scene(bd3_array)
+    b04_norm = normalize_per_band_and_scene(bd4_array)
+
+    field = np.dstack((b04_norm, b03_norm, b02_norm, b01_norm))
+    mask  = rio.open(Path.cwd() / f"{train_label_path}/{dataset_id}_labels_train_{scene_id_tile_and_time.split('_')[0]}/raster_labels.tif").read(1)
+    return field, mask 
+
+
+def name_to_id_and_time_stamp(
+    tile: str = "",
+    ):
+    ids_list  = tile.split('_') # XX_YYYY_MM where XX is the training file id and YYYY_MM is the timestamp
+    tile_id   = ids_list[0]
+    timestamp = f"{ids_list[1]}_{ids_list[2]}"
+    return tile_id, timestamp
+
+def stack_bands(file_list):
+    with rio.open(file_list[0]) as src:
+        stacked_image = src.read(1)
+    for file in file_list[1:]:
+        with rio.open(file) as src:
+            stacked_image = np.dstack((stacked_image, src.read(1)))
+    return stacked_image
+    original = None
+# 
+
+def show_image_scene_and_mask(field:np.ndarray, mask:np.ndarray ): 
+    """Show the field and corresponding mask."""
+    fig = plt.figure(figsize=(8,6))
+    ax1 = fig.add_subplot(121)  # left side
+    ax2 = fig.add_subplot(122)  # right side
+    #ax1.imshow(field.T.astype('int8'), vmin=0, vmax=255)  # rgb band
+    ax1.imshow((field.T / 5000 * 255).astype('uint8'))  # rgb band
+    
+    plt.gray()
+   
+    ax2.imshow(mask.T)
+    plt.tight_layout()
+    plt.show()
