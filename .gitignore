@@ -3032,3 +3032,15 @@ data_prepocessed/train/image/56_2021_11_a60_.tif
 data_prepocessed/train/image/56_2021_11_a60_.vrt
 data_prepocessed/train/image/56_2021_12_a60_.tif
 data_prepocessed/train/image/56_2021_12_a60_.vrt
+data_preprocessed/train/cont/03_2021_08_a60_.tif
+data_preprocessed/train/cont/03_2021_10_a60_.tif
+data_preprocessed/train/cont/03_2021_11_a60_.tif
+data_preprocessed/train/image/03_2021_08_a60_.tif
+data_preprocessed/train/image/03_2021_08_a60_.vrt
+data_preprocessed/train/image/03_2021_10_a60_.tif
+data_preprocessed/train/image/03_2021_10_a60_.vrt
+data_preprocessed/train/image/03_2021_11_a60_.tif
+data_preprocessed/train/image/03_2021_11_a60_.vrt
+data_preprocessed/train/mask/03_2021_08_a60_.tif
+data_preprocessed/train/mask/03_2021_10_a60_.tif
+data_preprocessed/train/mask/03_2021_11_a60_.tif

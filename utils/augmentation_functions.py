@@ -10,6 +10,7 @@ import random
 import torch 
 import torchvision.transforms.functional as TF
 import torchvision.transforms as tran
+import cv2
 
 torch.use_deterministic_algorithms(True)
 random.seed(20)
@@ -288,4 +289,62 @@ def apply_augmentation_on_tiles(
         prefix = tile_id,
         write_folder = f"./augmented_data/{timestamp}"
     ) #approximately 30 seconds
+# %%
+## MASK
+
+def get_boundary(label, kernel_size = (1,1)):
+    tlabel = label.astype(np.uint8)
+    temp = cv2.Canny(tlabel,0,1)
+    tlabel = cv2.dilate(
+        temp,
+        cv2.getStructuringElement(
+            cv2.MORPH_CROSS,
+            kernel_size),
+        iterations = 1)
+    tlabel = tlabel.astype(np.float32)
+    tlabel /= 255.
+    return tlabel
+
+def get_crop(image, kernel_size = (3,3)):
+
+    im_floodfill = image.copy()
+    h, w = image.shape[:2]
+    mask = np.zeros((h+2, w+2), np.uint8)
+
+    # floodfill
+    cv2.floodFill(im_floodfill, mask, (0,0), 1)
+
+    # invert
+    im_floodfill = cv2.bitwise_not(im_floodfill)
+
+    # kernel size
+    kernel = np.ones(kernel_size, np.uint8)
+
+    # erode & dilate
+    img_erosion = cv2.erode(im_floodfill, kernel, iterations=1)
+    return cv2.dilate(img_erosion, kernel, iterations=1) - 254
+
+def get_distance(label):
+    print(label.shape)
+    tlabel = label.astype(np.uint8)
+    
+ 
+ 
+    dist = cv2.distanceTransform(tlabel,
+                                 cv2.DIST_L1,
+                                 0)
+
+    print(tlabel.shape)
+    # get unique objects
+    output = cv2.connectedComponentsWithStats(label, 4, cv2.CV_32S)
+    print(tlabel.shape)
+    num_objects = output[0]
+    labels = output[1]
+    
+    # min/max normalize dist for each object
+    for l in range(num_objects):
+      dist[labels==l] = (dist[labels==l]) / (dist[labels==l].max())
+
+    return dist
+
 # %%
