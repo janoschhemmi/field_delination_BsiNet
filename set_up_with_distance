@@ -93,7 +93,7 @@ stds = [488.46370001006545, 835.3087745800353, 885.8593736168934, 3051.836265073
 
 # %%
 # stack original images in new augmentation folder 
-for j, folder in enumerate(folders[40:43]):
+for j, folder in enumerate(folders):
 
     ## get ids
     date_time  = folder[-7:]
@@ -295,7 +295,7 @@ for j, folder in enumerate(folders[40:43]):
             ax3.imshow(dist_a60.transpose(2,1,0))
             plt.tight_layout()
 
-        ploti = True
+        ploti = False
         if ploti:
             print(type(scene))
             print(type(mask))
@@ -317,7 +317,7 @@ for j, folder in enumerate(folders[40:43]):
             plt.show
     
     
-
+print("finish")
 
 
 
