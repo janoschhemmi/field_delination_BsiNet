@@ -1,3 +1,4 @@
+# %%
 import torch
 import numpy as np
 import torch.nn as nn
@@ -168,3 +169,12 @@ class LossBsiNet:
         )
 
         return criterion
+
+tt = LossMulti(num_classes=2)
+
+#tt = nn.MSELoss() 
+print(tt)
+
+
+
+#%%

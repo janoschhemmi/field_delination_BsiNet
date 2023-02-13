@@ -13,6 +13,7 @@ from torchvision import transforms
 from scipy import io
 import os
 from osgeo import gdal
+import rasterio as rio
 
 # %%
 
@@ -71,9 +72,9 @@ class DatasetImageMaskContourDist(Dataset):
 
     def __init__(self, dir, file_names, distance_type):
 
+        self.dir = dir
         self.file_names = file_names
         self.distance_type = distance_type
-        self.dir = dir
 
     def __len__(self):
 
@@ -82,10 +83,10 @@ class DatasetImageMaskContourDist(Dataset):
     def __getitem__(self, idx):
 
         img_file_name = self.file_names[idx]
-        image = load_image(os.path.join(self.dir,img_file_name+'.tif'))
-        mask = load_mask(os.path.join(self.dir,img_file_name+'.tif'))
+        image =   load_image(os.path.join(self.dir,img_file_name+'.tif'))
+        mask =    load_mask(os.path.join(self.dir,img_file_name+'.tif'))
         contour = load_contour(os.path.join(self.dir,img_file_name+'.tif'))
-        dist = load_distance(os.path.join(self.dir,img_file_name+'.tif'), self.distance_type)
+        dist =    load_distance(os.path.join(self.dir,img_file_name+'.tif'), self.distance_type)
 
         return img_file_name, image, mask, contour, dist
 
@@ -94,24 +95,32 @@ class DatasetImageMaskContourDist(Dataset):
 
 def load_image(path):
 
-    img = Image.open(path)
-    data_transforms = transforms.Compose(
+    img = rio.open(path).read()
+    print(img.shape)
+    """data_transforms = transforms.Compose(
         [
            # transforms.Resize(256),
             transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+            # transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
 
         ]
-    )
-    img = data_transforms(img)
+    )"""
+    img = torch.tensor(img)
 
     return img
 
 
 def load_mask(path):
-    mask = cv2.imread(path.replace("image", "mask").replace("tif", "tif"), 0)
+    mask = rio.open(path.replace("image", "mask")).read()
    # im_width, im_height, im_bands, mask, im_geotrans, im_proj = readTif(path.replace("image", "mask").replace("tif", "tif"))
     ###mask = mask/225.
+
+    print(path.replace("image", "mask"))
+    print("lala")
+    print(mask.shape)
+    print(mask.max())
+    print(mask.min())
+   
     mask[mask == 255] = 1
     mask[mask == 0] = 0
 
@@ -120,11 +129,10 @@ def load_mask(path):
 
 def load_contour(path):
 
-    contour = cv2.imread(path.replace("image", "contour").replace("tif", "tif"), 0)
+    contour = rio.open(path.replace("image", "cont")).read()
     ###contour = contour/255.
     contour[contour ==255] = 1
     contour[contour == 0] = 0
-
 
     return torch.from_numpy(np.expand_dims(contour, 0)).long()
 
@@ -132,16 +140,16 @@ def load_contour(path):
 def load_distance(path, distance_type):
 
     if distance_type == "dist_mask":
-        path = path.replace("image", "dist_mask").replace("tif", "mat")
-
-        dist = io.loadmat(path)["D2"]
+        path = path.replace("image", "dist")
+        dist = cv2.imread(path)
 
     if distance_type == "dist_contour":
-        path = path.replace("image", "dist_contour").replace("tif", "mat")
-        dist = io.loadmat(path)["D2"]
+        path = path.replace("image", "dist")
+        dist = rio.open(path).read()
+        print(dist.shape)
 
     if distance_type == "dist_contour_tif":
-        dist = cv2.imread(path.replace("image", "dist_contour_tif").replace("tif", "tif"), 0)
-        dist = dist/255.
+        dist = cv2.imread(path.replace("image", "dist_contour_tif"), 0)
+        # dist = dist/255.
 
-    return torch.from_numpy(np.expand_dims(dist, 0)).float()
+    return torch.from_numpy(dist).float()
