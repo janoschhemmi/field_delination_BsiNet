@@ -58,16 +58,21 @@ folders = sorted([d for d in next(os.walk(root_pth_scenes))[1]])
 
 ## define Augmentation routines 
 ## for each scene id same augmentation 
-aug_1 = {'rot': 1, 'brightness': 1, 'adjust_contrast': 1,'adjust_sharpness': 1, 
-            'resize_crop': [10,10,236,236], 'hor_flip': True, 'ver_flip': True, 'aug_name': "_a62_"}
 
-aug_2 = {'rot': 2, 'brightness': 1.1, 'adjust_contrast': 0.9,'adjust_sharpness': 1.05, 
+
+aug_1 = {'rot': 1, 'brightness': 1, 'adjust_contrast': 1,'adjust_sharpness': 1, 
+            'resize_crop': [1,1,254,254], 'hor_flip': True, 'ver_flip': True, 'aug_name': "_a61_"}
+
+aug_2 = {'rot': 2, 'brightness': 1, 'adjust_contrast': 1,'adjust_sharpness': 1, 
+            'resize_crop': [2,2,250,250], 'hor_flip': True, 'ver_flip': True, 'aug_name': "_a62_"}
+
+aug_3 = {'rot': 2, 'brightness': 1.1, 'adjust_contrast': 0.9,'adjust_sharpness': 1.05, 
             'resize_crop': [20,20,226,226], 'hor_flip': False, 'ver_flip': True, 'aug_name': "_a63_"}
     
-aug_3 = {'rot': 3, 'brightness': 1.1, 'adjust_contrast': 0.85,'adjust_sharpness': 0.95, 
+aug_4 = {'rot': 3, 'brightness': 1.1, 'adjust_contrast': 0.85,'adjust_sharpness': 0.95, 
             'resize_crop': [5,5,220,220], 'hor_flip': True, 'ver_flip': False, 'aug_name': "_a64_"}
     
-aug_4 = {'rot': 2, 'brightness': 0.95, 'adjust_contrast': 1.1,'adjust_sharpness': 1.2, 
+aug_5 = {'rot': 3, 'brightness': 0.95, 'adjust_contrast': 1.1,'adjust_sharpness': 1.2, 
             'resize_crop': [30,30,200,200], 'hor_flip': True, 'ver_flip': True, 'aug_name': "_a65_"}
     
 ##  get mean and std 
@@ -88,7 +93,7 @@ stds = [488.46370001006545, 835.3087745800353, 885.8593736168934, 3051.836265073
 
 # %%
 # stack original images in new augmentation folder 
-for j, folder in enumerate(folders[20:23]):
+for j, folder in enumerate(folders[40:43]):
 
     ## get ids
     date_time  = folder[-7:]
@@ -130,7 +135,6 @@ for j, folder in enumerate(folders[20:23]):
 
     ## standardize
     for i in range(4):
-        print(i) 
 
         mean  = means[i] / 10000
         std   = stds[i] / 10000
@@ -139,7 +143,6 @@ for j, folder in enumerate(folders[20:23]):
 
 
     ## safe to floats
-    print(full_path_scenes_in)
     mem_ds_scene = create_mem_ds(files[0], n_bands = 4, dtype=gdal.GDT_CFloat32)
     copy_mem_ds(pth=full_file_path_scenes_out, mem_ds=mem_ds_scene)
     for i in range(4):
@@ -168,81 +171,69 @@ for j, folder in enumerate(folders[20:23]):
 
     ## get boundary 
     cont     = get_crop(mask.transpose(1,2,0))
+
     # get distance
     dist = get_distance(cont)
     dist = np.nan_to_num(dist) 
 
+
     ## write boundary and dist 
+
     mem_ds_cont= create_mem_ds(files[0], n_bands = 1, dtype=gdal.GDT_Int16)
     copy_mem_ds(pth=cont_file_path_out, mem_ds=mem_ds_cont)
     for i in range(1):
-           mem_ds_cont.GetRasterBand(i + 1).WriteArray(cont)
+           mem_ds_cont.GetRasterBand(i + 1).WriteArray(cont[-1,:,:])
 
     mem_ds_dist= create_mem_ds(files[0], n_bands = 1, dtype=gdal.GDT_Float32)
     copy_mem_ds(pth=dist_file_path_out, mem_ds=mem_ds_dist)
     for i in range(1):
-           mem_ds_dist.GetRasterBand(i + 1).WriteArray(dist)
-
+           mem_ds_dist.GetRasterBand(i + 1).WriteArray(dist[-1,:,:])
 
     ## Augmentation
     #original_scene = torch.from_numpy(original_scene)
     #original_mask  = torch.from_numpy(original_mask)
-
-    Augs = [aug_1, aug_2, aug_3, aug_4]
+   
+    Augs = [aug_1, aug_2, aug_3, aug_4, aug_5]
     for u, aug in enumerate(Augs):
         nn = aug['aug_name']
         print("start augmentation with:", nn)
 
-        scene_a60 = vrt_image
-        mask_a60 = mask
-        cont_a60 = cont
-        dist_a60 = dist
+        if u == 0:
+            scene_a60 = vrt_image
+            mask_a60 = mask
+            cont_a60 = cont
+            dist_a60 = dist
 
-        print(vrt_image.shape)
-        print(mask.shape)
-        print(cont.shape)
-        print(dist.shape)
-
-        print("here")
-        vrt_image = torch.permute(torch.from_numpy(vrt_image),(1,2,0))
-        print("here")
-        mask = torch.permute(torch.from_numpy(mask),(1,2,0))
-        print("here")
-        cont = torch.from_numpy(cont)
-        print("here")
-        dist = torch.from_numpy(dist)
+    
+        vrt_image = torch.permute(torch.from_numpy(scene_a60),(1,2,0))
+        mask = torch.permute(torch.from_numpy(mask_a60),(1,2,0))
+        cont = torch.permute(torch.from_numpy(cont_a60),(1,2,0))
+        dist = torch.permute(torch.from_numpy(dist_a60),(1,2,0))
         
-        print(vrt_image.shape)
-        print(mask.shape)
-        print(cont.shape)
-        print(dist.shape)
-
         scene = torch.rot90(vrt_image, aug['rot'], (0,1))
         mask  = torch.rot90(mask, aug['rot'], (0,1))
         cont  = torch.rot90(cont, aug['rot'], (0,1))
         dist  = torch.rot90(dist, aug['rot'], (0,1))
 
-        print(vrt_image.shape)
-        print(mask.shape)
-        print(cont.shape)
-        print(dist.shape)
-
         ## brightness
         scene = a_brightness(scene, aug['brightness'], 4) 
         ## sharpness
+        
         scene = a_adjust_sharpness(scene, aug['adjust_sharpness'], 4)
         ## contrast
         scene = a_adjust_contrast(scene, aug['adjust_contrast'], 4)
         ## resize
         scene = a_resized_crop(scene, 4, aug['resize_crop'][0],aug['resize_crop'][1],
             aug['resize_crop'][2],aug['resize_crop'][3], 256, tran.InterpolationMode.NEAREST)
-        mask = a_resized_crop(mask, 1, aug['resize_crop'][0],aug['resize_crop'][1],
-            aug['resize_crop'][2],aug['resize_crop'][3], 256, tran.InterpolationMode.NEAREST)
-        cont = a_resized_crop(cont, 1, aug['resize_crop'][0],aug['resize_crop'][1],
-            aug['resize_crop'][2],aug['resize_crop'][3], 256, tran.InterpolationMode.NEAREST)
-        dist = a_resized_crop(dist, 1, aug['resize_crop'][0],aug['resize_crop'][1],
-            aug['resize_crop'][2],aug['resize_crop'][3], 256, tran.InterpolationMode.NEAREST)
         
+        mask = a_resized_crop(mask.permute(2,0,1), 1, aug['resize_crop'][0],aug['resize_crop'][1],
+            aug['resize_crop'][2],aug['resize_crop'][3], 256, tran.InterpolationMode.NEAREST)
+
+        cont = a_resized_crop(cont.permute(2,0,1), 1, aug['resize_crop'][0],aug['resize_crop'][1],
+            aug['resize_crop'][2],aug['resize_crop'][3], 256, tran.InterpolationMode.NEAREST)
+        dist = a_resized_crop(dist.permute(2,0,1), 1, aug['resize_crop'][0],aug['resize_crop'][1],
+            aug['resize_crop'][2],aug['resize_crop'][3], 256, tran.InterpolationMode.NEAREST)
+ 
         ## flips 
         if(aug['hor_flip']==True):
             scene = a_hor_flip(scene, 4)
@@ -255,21 +246,22 @@ for j, folder in enumerate(folders[20:23]):
             cont = a_ver_flip(cont, 1)
             dist = a_ver_flip(dist, 1)
 
-        ## write augmentations
-        full_pth_aug_scene = f'{root_pth_scenes_out}/{tile_id}_{date_time}_{nn}.tif'
-        full_pth_aug_mask  = f'{root_pth_masks_out}/{tile_id}_{date_time}_{nn}.tif'
-        full_pth_aug_cont  = f'{root_pth_cont_out}/{tile_id}_{date_time}_{nn}.tif'
-        full_pth_aug_dist  = f'{root_pth_dist_out}/{tile_id}_{date_time}_{nn}.tif'
 
-        
-        mem_img_aug  = create_mem_ds(full_pth_aug_scene, 4)
-        mem_img_msk  = create_mem_ds(full_pth_aug_mask, 1)
-        mem_img_cont = create_mem_ds(full_pth_aug_cont, 1)
-        mem_img_dist = create_mem_ds(full_pth_aug_dist, 1)
+        ## write augmentations
+        full_pth_aug_scene = f'{root_pth_scenes_out}/{tile_id}_{date_time}{nn}.tif'
+        full_pth_aug_mask  = f'{root_pth_masks_out}/{tile_id}_{date_time}{nn}.tif'
+        full_pth_aug_cont  = f'{root_pth_cont_out}/{tile_id}_{date_time}{nn}.tif'
+        full_pth_aug_dist  = f'{root_pth_dist_out}/{tile_id}_{date_time}{nn}.tif'
+
+        mem_img_aug  = create_mem_ds(files[0], 4)
+        mem_img_msk  = create_mem_ds(files[0], 1)
+        mem_img_cont = create_mem_ds(files[0], 1)
+        mem_img_dist = create_mem_ds(files[0], 1)
 
         # write bands
         for b in range(scene.shape[0]):
             mem_img_aug.GetRasterBand(b+1).WriteArray(scene[b,:,:].numpy()) 
+
         mem_img_msk.GetRasterBand(1).WriteArray(mask[0,:,:].numpy()) 
         mem_img_cont.GetRasterBand(1).WriteArray(cont[0,:,:].numpy()) 
         mem_img_dist.GetRasterBand(1).WriteArray(dist[0,:,:].numpy()) 
@@ -279,27 +271,55 @@ for j, folder in enumerate(folders[20:23]):
         copy_mem_ds(full_pth_aug_cont,  mem_img_cont)
         copy_mem_ds(full_pth_aug_dist,  mem_img_dist)
 
+        scene = scene.numpy()
+        mask = mask.numpy()
+        cont = cont.numpy()
+        dist = dist.numpy()
+
+        print(scene.shape)
+        print(mask.shape)
+        print(cont.shape)
+        print(dist.shape)
+
+        ## print plot 
+        if u == 0:
+            fig, axes = plt.subplots(figsize=(8, 8), ncols= 4, nrows= 1 )
+            ax, ax1, ax2, ax3 = axes.flatten()
+            print(scene_a60.shape)
+            ax.imshow(scene_a60.transpose(2,1,0))
+
+            print(cont_a60.shape)
+            ax1.imshow(mask_a60.transpose(2,1,0))
+            print(cont_a60.dtype)
+            ax2.imshow(cont_a60.transpose(2,1,0))
+            ax3.imshow(dist_a60.transpose(2,1,0))
+            plt.tight_layout()
+
+        ploti = True
+        if ploti:
+            print(type(scene))
+            print(type(mask))
+            print(type(cont))
+            print(type(dist))
+            print(scene[1:10, 1:10])
+
+            fig, axes = plt.subplots(figsize=(8, 8), ncols= 4, nrows= 1 )
+            ax, ax1, ax2, ax3 = axes.flatten()
+            print(scene.shape)
+            ax.imshow(scene.transpose(2,1,0))
+
+            print(cont.shape)
+            ax1.imshow(mask.transpose(2,1,0))
+            print(cont.dtype)
+            ax2.imshow(cont.transpose(2,1,0))
+            ax3.imshow(dist.transpose(2,1,0))
+            plt.title(nn)
+            plt.show
+    
+    
 
 
-    print(distance[1:100,1:10])
-    print(cont[1:100,1:10])
 
-    print(distance.dtype)
-    print(cont.dtype)
-
-    fig, axes = plt.subplots(figsize=(8, 8), ncols= 4, nrows= 1 )
-    ax, ax1, ax2, ax3 = axes.flatten()
-    print(vrt_image.shape)
-    ax.imshow(vrt_image.transpose(2,1,0))
-
-    print(cont.shape)
-    ax1.imshow(mask.transpose(2,1,0))
-    print(cont.dtype)
-    ax2.imshow(cont)
-    ax3.imshow(distance)
-    plt.tight_layout()
-   
-    ## do add on masks 
 
 
 # %%

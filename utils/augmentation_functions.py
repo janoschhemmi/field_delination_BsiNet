@@ -29,7 +29,7 @@ def a_brightness(
 
     for i in range(n_bands):
 
-        layer = tensor[i,:,:]
+        layer = tensor[:,:,i]
         layer = TF.adjust_brightness(layer, brightness_factor = brightness)
 
         if i == 0:
@@ -125,13 +125,15 @@ def a_resized_crop(tensor, n_bands, i, j, h, w, size, interpolation='BILINEAR'):
         np.ndarray: Cropped image.
     """
     for i in range(n_bands):
+
    
         layer = tensor[i,:,:]
         layer = layer[None, :, :]
 
         #layer = layer[None, :, :]
-        layer = TF.resized_crop(layer, i,j,h,w, size, interpolation=interpolation )
 
+        layer = TF.resized_crop(layer, i,j,h,w, size, interpolation=interpolation )
+ 
         if i == 0:
             out = layer 
         if i == 1:
@@ -143,7 +145,9 @@ def a_resized_crop(tensor, n_bands, i, j, h, w, size, interpolation='BILINEAR'):
             out_3 = torch.stack((out_2, layer))
             out = torch.cat((out_1, out_3), dim = 0)
             out = out[:, -1, :,:]
-
+            print(out.shape)
+    print("out")
+    print(out.shape)
     return out         
 
 
@@ -322,22 +326,24 @@ def get_crop(image, kernel_size = (3,3)):
 
     # erode & dilate
     img_erosion = cv2.erode(im_floodfill, kernel, iterations=1)
-    return cv2.dilate(img_erosion, kernel, iterations=1) - 254
+    cont =  cv2.dilate(img_erosion, kernel, iterations=1) - 254
+    return cont[np.newaxis,:,:]
 
 def get_distance(label):
-    print(label.shape)
-    tlabel = label.astype(np.uint8)
-    
- 
+
+    tlabel = label.transpose(1,2,0).astype(np.uint8)
+
  
     dist = cv2.distanceTransform(tlabel,
                                  cv2.DIST_L1,
                                  0)
 
-    print(tlabel.shape)
+    dist = dist[:,:,np.newaxis]
+
     # get unique objects
-    output = cv2.connectedComponentsWithStats(label, 4, cv2.CV_32S)
-    print(tlabel.shape)
+    output = cv2.connectedComponentsWithStats(label.transpose(1,2,0), 4, cv2.CV_32S)
+
+
     num_objects = output[0]
     labels = output[1]
     
@@ -345,6 +351,6 @@ def get_distance(label):
     for l in range(num_objects):
       dist[labels==l] = (dist[labels==l]) / (dist[labels==l].max())
 
-    return dist
+    return dist[np.newaxis,:,:,-1]
 
 # %%
