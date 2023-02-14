@@ -40,14 +40,16 @@ def build_model(model_type):
     return model
 
 
-def train_model(model, targets, model_type, criterion, optimizer):
+def train_model(model, inputs, targets, model_type, criterion, optimizer, device):
 
     if model_type == "bsinet_2":
 
         optimizer.zero_grad()
 
         with torch.set_grad_enabled(True):
+          
             outputs = model(inputs)
+
             loss = criterion(
                 outputs[0], outputs[1], outputs[2], targets[0], targets[1], targets[2]
             )
@@ -92,7 +94,7 @@ if __name__ == "__main__":
 
     args.train_path = '/home/hemmerling/projects/field_delination_BsiNet/data_preprocessed/train/image'
     args.val_path = '/home/hemmerling/projects/field_delination_BsiNet/data'
-    args.save_path = './model'
+    args.save_path = '/home/hemmerling/projects/field_delination_BsiNet/models_safe'
     args.object_type = "duno"
 
     ## Model params
@@ -104,7 +106,11 @@ if __name__ == "__main__":
     ## Training params
     args.num_epochs = 3
 
+    log_path = args.save_path + "/summary"
 
+    if not os.path.isdir(log_path):
+        os.makedirs(log_path)
+    writer = SummaryWriter(log_dir=log_path)
 
     train_file_names = glob.glob(os.path.join(args.train_path, "*.tif"), recursive=False)
     #val_file_names = glob.glob(os.path.join(args.val_path, "*.tif"))
@@ -115,6 +121,7 @@ if __name__ == "__main__":
     ## set cuda device 
     #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     device = torch.device("cuda")
+    # device = torch.device("cpu")
     print(device)
 
     ## load model 
@@ -176,24 +183,30 @@ if __name__ == "__main__":
         global_step = epoch * len(trainLoader)
         running_loss = 0.0
 
-        print(global_step)
 
         for i, (img_file_name, inputs, targets1, targets2,targets3) in enumerate(
             tqdm(trainLoader)
         ):
 
+            print("sisi")
             model.train()
-
             inputs = inputs.to(device)
+            
+            targets1 = targets1[:,-1,:,:,:]
+            targets2 = targets2[:,-1,:,:,:]
             targets1 = targets1.to(device)
             targets2 = targets2.to(device)
             targets3 = targets3.to(device)
 
             targets = [targets1, targets2,targets3]
 
+            #print(model.get_device())
+            print(targets[0].get_device())
+            print(inputs[0].get_device())
 
-            loss = train_model(model, targets, args.model_type, criterion, optimizer)
 
+            loss = train_model(model, inputs, targets, args.model_type, criterion, optimizer, device)
+   
             writer.add_scalar("loss", loss.item(), epoch)
 
             running_loss += loss.item() * inputs.size(0)

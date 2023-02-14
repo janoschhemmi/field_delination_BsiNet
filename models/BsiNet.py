@@ -68,8 +68,13 @@ class SpatialGroupEnhance(nn.Module):
         self.sig      = nn.Sigmoid()
 
     def forward(self, x): # (b, c, h, w)
+        print("sge: ")
+        print(x)
+        print(x.size)
         b, c, h, w = x.size()
+
         x = x.view(b * self.groups, -1, h, w)
+        print(x)
         xn = x * self.avg_pool(x)
         xn = xn.sum(dim=1, keepdim=True)
         t = xn.view(b * self.groups, -1)
@@ -81,7 +86,7 @@ class SpatialGroupEnhance(nn.Module):
         t = t.view(b * self.groups, 1, h, w)
         x = x * self.sig(t)
         x = x.view(b, c, h, w)
-        return 
+        return x
 
 
 
@@ -315,7 +320,7 @@ class BsiNet(nn.Module):
 class BsiNet_2(nn.Module):
     def __init__(
             self,
-            input_channels: int = 3,
+            input_channels: int = 4,
             filters_base: int = 32,
             num_classes=1,
             add_output=True,
@@ -345,6 +350,7 @@ class BsiNet_2(nn.Module):
             self.conv_final3 = nn.Conv2d(filters_base, 1, 1)
 
     def forward(self, x):
+        print("Model-Input shape of tensor: " , x.shape)
         x1 = self.conv1(x)
 
         x2 = self.conv2(x1)
@@ -371,16 +377,25 @@ class BsiNet_2(nn.Module):
 
         x9 = self.conv9(torch.cat([x8, x1], 1))
         x_out = self.sge(x9)
+    
+        print("Shape of tensor out of Unet: x_out: ", x_out.shape)
 
         if self.add_output:
 
             x_out1 = self.conv_final1(x_out)
+ 
             x_out2 = self.conv_final2(x_out)
+  
             x_out3 = self.conv_final3(x_out)
+      
             if self.num_classes > 1:
                 x_out1 = F.log_softmax(x_out1, dim=1)
                 x_out2 = F.log_softmax(x_out2, dim=1)
             x_out3 = torch.sigmoid(x_out3)
+          
+            return [x_out1, x_out2, x_out3]
+          
 
-        return [x_out1, x_out2, x_out3]
+        else:
+            return x_out
 # %%
