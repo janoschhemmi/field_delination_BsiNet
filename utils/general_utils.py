@@ -20,7 +20,11 @@ def evaluate(device, epoch, model, data_loader, writer):
             inputs = inputs.to(device)
             targets = targets.to(device)
             outputs = model(inputs)
-            loss = F.nll_loss(outputs[0], targets.squeeze(1))
+            #print("ee")
+            #print(outputs[0].shape)
+            #print(targets.squeeze(1).shape)
+            #print(targets[:,-1,:,:].squeeze(1).shape)
+            loss = F.nll_loss(outputs[0], targets[:,-1,:,:].squeeze(1))
             losses.append(loss.item())
 
         writer.add_scalar("Dev_Loss", np.mean(losses), epoch)
@@ -30,10 +34,22 @@ def evaluate(device, epoch, model, data_loader, writer):
 # %%
 def visualize(device, epoch, model, data_loader, writer, val_batch_size, train=True):
     def save_image(image, tag, val_batch_size):
+        from PIL import Image
+     
+
+        
+        #print(image.shape)
+        image = image[-1,-1,:,: ]#.permute(1,2,0)
+        #print(image.shape)
+        #print(image.min())
+        #print(image.max())
         image -= image.min()
         image /= image.max()
+        image  = image * 255 ## evtl nonsense
+        #print(image.min())
+        #print(image.max())
         grid = torchvision.utils.make_grid(
-            image, nrow=int(np.sqrt(val_batch_size)), pad_value=0, padding=25
+            image * 255, nrow=int(np.sqrt(val_batch_size)), pad_value=0, padding=25
         )
         writer.add_image(tag, grid, epoch)
 

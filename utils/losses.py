@@ -89,7 +89,7 @@ def focal_loss(predict, label, alpha=0.6, beta=2):
 
 class Loss:
     def __init__(self, dice_weight=0.0, class_weights=None, num_classes=1, device=None):
-        self.device = device
+        self.device = torch.device("cuda")
         if class_weights is not None:
             nll_weight = torch.from_numpy(class_weights.astype(np.float32)).to(
                 self.device
@@ -121,22 +121,48 @@ class LossMulti:
             self, jaccard_weight=0.0, class_weights=None, num_classes=1, device=None
     ):
         self.device = device
+        # self.device = None
         if class_weights is not None:
             nll_weight = torch.from_numpy(class_weights.astype(np.float32)).to(
-                self.device
+                torch.device("cuda")
             )
         else:
             nll_weight = None
 
-        self.nll_loss = nn.NLLLoss(weight=nll_weight)
+        self.nll_loss = nn.NLLLoss(weight=nll_weight).to(device) 
         self.jaccard_weight = jaccard_weight
         self.num_classes = num_classes
 
     def __call__(self, outputs, targets):
 
-        targets = targets.squeeze(1)
+        #print(len(outputs))
+        #print(len(targets))
+
+        outputs  = outputs
+        targets  = targets.long().squeeze()
+
+         
+        #targets = targets.type(torch.LongTensor)   
+  
+        outputs  = outputs
+        targets  = targets
+
+        #print((outputs.shape))
+        #print((targets.shape))
+
+        #self.nll_loss(outputs, targets)
+        #print(torch.max(outputs))
+        #print(torch.min(outputs))
+        #print(torch.max(targets))
+        #print(torch.min(targets))
 
         loss = (1 - self.jaccard_weight) * self.nll_loss(outputs, targets)
+        #print(loss)
+        #print(len(outputs))
+        #print(len(targets))
+        #print((outputs.shape))
+        #print((targets.shape))
+
 
         if self.jaccard_weight:
             eps = 1e-7  # 原先是1e-7
@@ -154,10 +180,10 @@ class LossMulti:
 
 
 class LossBsiNet:
-    def __init__(self, weights=[1, 1, 1]):
-        self.criterion1 = LossMulti(num_classes=2)   #mask_loss
-        self.criterion2 = LossMulti(num_classes=2)   #contour_loss
-        self.criterion3 = nn.MSELoss()               ##distance_loss
+    def __init__(self, weights=[1, 1, 1], device = torch.device("cuda")):
+        self.criterion1 = LossMulti(num_classes=2, device=device)   #mask_loss
+        self.criterion2 = LossMulti(num_classes=2, device=device)   #contour_loss
+        self.criterion3 = nn.MSELoss().to(device)               ##distance_loss
         self.weights = weights
 
     def __call__(self, outputs1, outputs2, outputs3, targets1, targets2, targets3):
@@ -170,10 +196,7 @@ class LossBsiNet:
 
         return criterion
 
-tt = LossMulti(num_classes=2)
 
-#tt = nn.MSELoss() 
-print(tt)
 
 
 
