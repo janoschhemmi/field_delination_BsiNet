@@ -323,10 +323,12 @@ class BsiNet_2(nn.Module):
             self,
             input_channels: int = 4,
             filters_base: int = 32,
-            num_classes=2,
+            num_classes=1,
             add_output=True,
     ):
         super().__init__()
+        self.dropout = nn.Dropout(0.25)
+
         self.num_classes = num_classes
         self.add_output = add_output
         self.conv1 = NetModule(input_channels, 32)
@@ -346,8 +348,8 @@ class BsiNet_2(nn.Module):
         self.upsample2 = nn.Upsample(scale_factor=4)
         self.sge = SpatialGroupEnhance(32)
         if add_output:
-            self.conv_final1 = nn.Conv2d(filters_base, num_classes, 1)
-            self.conv_final2 = nn.Conv2d(filters_base, num_classes, 1)
+            self.conv_final1 = nn.Conv2d(filters_base, 1, 1)
+            self.conv_final2 = nn.Conv2d(filters_base, 1, 1)
             self.conv_final3 = nn.Conv2d(filters_base, 1, 1)
 
     def forward(self, x):
@@ -378,22 +380,28 @@ class BsiNet_2(nn.Module):
 
         x9 = self.conv9(torch.cat([x8, x1], 1))
         x_out = self.sge(x9)
+
+        #x_out = self.dropout(x_out)
+        print("___________________________ Done no Dropout _____________________-")
     
-        #print("Shape of tensor out of Unet: x_out: ", x_out.shape)
+        #print("Shape of tensor out of Unet: x_out: ", x_out.shape())
 
         if self.add_output:
 
             x_out1 = self.conv_final1(x_out)
- 
+
             x_out2 = self.conv_final2(x_out)
   
             x_out3 = self.conv_final3(x_out)
       
-            if self.num_classes > 1:
-                x_out1 = F.log_softmax(x_out1, dim=1)
-                x_out2 = F.log_softmax(x_out2, dim=1)
-            x_out3 = torch.sigmoid(x_out3)
-          
+            x_out1 = torch.sigmoid(x_out1)
+            x_out2 = torch.sigmoid(x_out2)
+
+            print("Shape of tensor out of Unet: x_out1: ", x_out1.size())
+            print("Shape of tensor out of Unet: x_out2: ", x_out2.size())
+            print("Shape of tensor out of Unet: x_out3: ", x_out3.size())
+
+
             return [x_out1, x_out2, x_out3]
           
 

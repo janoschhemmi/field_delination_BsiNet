@@ -47,10 +47,10 @@ if download_data:
 root_pth_scenes =     f'{project_path}/data/{dataset_id}/{dataset_id}_source_train'
 root_pth_masks =      f'{project_path}/data/{dataset_id}/{dataset_id}_labels_train'
 ## out 
-root_pth_scenes_out = f'{project_path}/data_preprocessed/train/image'
-root_pth_masks_out =  f'{project_path}/data_preprocessed/train/mask'
-root_pth_cont_out =  f'{project_path}/data_preprocessed/train/cont'
-root_pth_dist_out =  f'{project_path}/data_preprocessed/train/dist'
+root_pth_scenes_out = f'{project_path}/data_preprocessed_2/train/image'
+root_pth_masks_out =  f'{project_path}/data_preprocessed_2/train/mask'
+root_pth_cont_out =  f'{project_path}/data_preprocessed_2/train/cont'
+root_pth_dist_out =  f'{project_path}/data_preprocessed_2/train/dist'
 
 ##get in folders 
 folders = sorted([d for d in next(os.walk(root_pth_scenes))[1]])
@@ -61,19 +61,22 @@ folders = sorted([d for d in next(os.walk(root_pth_scenes))[1]])
 
 add_on = '_05norm'
 aug_1 = {'rot': 1, 'brightness': 1, 'adjust_contrast': 1,'adjust_sharpness': 1, 
-            'resize_crop': [1,1,254,254], 'hor_flip': True, 'ver_flip': True, 'aug_name': f"{add_on}_a61_"}
+            'resize_crop': [1,1,254,254], 'hor_flip': False, 'ver_flip': True, 'aug_name': f"{add_on}_a61_"}
 
-aug_2 = {'rot': 2, 'brightness': 1, 'adjust_contrast': 1,'adjust_sharpness': 1, 
+aug_2 = {'rot': 1, 'brightness': 1, 'adjust_contrast': 1,'adjust_sharpness': 1, 
             'resize_crop': [2,2,250,250], 'hor_flip': True, 'ver_flip': True, 'aug_name': f"{add_on}_a62_"}
 
-aug_3 = {'rot': 2, 'brightness': 1.1, 'adjust_contrast': 0.9,'adjust_sharpness': 1.05, 
-            'resize_crop': [20,20,226,226], 'hor_flip': False, 'ver_flip': True, 'aug_name': f"{add_on}_a63_"}
+aug_3 = {'rot': 2, 'brightness': 1.95, 'adjust_contrast': 0.95,'adjust_sharpness': 1.05, 
+            'resize_crop': [5,5,250,250], 'hor_flip': False, 'ver_flip': True, 'aug_name': f"{add_on}_a63_"}
     
-aug_4 = {'rot': 3, 'brightness': 1.1, 'adjust_contrast': 0.85,'adjust_sharpness': 0.95, 
-            'resize_crop': [5,5,220,220], 'hor_flip': True, 'ver_flip': False, 'aug_name': f"{add_on}_a64_"}
+aug_4 = {'rot': 2, 'brightness': 1.06, 'adjust_contrast': 0.89,'adjust_sharpness': 0.97, 
+            'resize_crop': [10,10,255,255], 'hor_flip': True, 'ver_flip': False, 'aug_name': f"{add_on}_a64_"}
     
-aug_5 = {'rot': 3, 'brightness': 0.95, 'adjust_contrast': 1.1,'adjust_sharpness': 1.2, 
-            'resize_crop': [30,30,200,200], 'hor_flip': True, 'ver_flip': True, 'aug_name': f"{add_on}_a65_"}
+aug_5 = {'rot': 3, 'brightness': 0.98, 'adjust_contrast': 1.05,'adjust_sharpness': 1.05, 
+            'resize_crop': [0,0,250,250], 'hor_flip': True, 'ver_flip': True, 'aug_name': f"{add_on}_a65_"}
+
+aug_6 = {'rot': 3, 'brightness': 1, 'adjust_contrast': 1.01,'adjust_sharpness': 1.02, 
+            'resize_crop': [2,2,252,252], 'hor_flip': True, 'ver_flip': True, 'aug_name': f"{add_on}_a66_"}
     
 ##  get mean and std 
 """import csv
@@ -99,7 +102,7 @@ min_list = [311.0, 594.0, 506.0, 1617.0]
 max_list = [1298.0, 1588.0, 1717.0, 4469.0]
 
 do_preprocessing_train = True
-do_preprocessing_test = True
+do_preprocessing_test = False
 
 if do_norm_0_1 == True:
     add_on = '_05norm'
@@ -157,8 +160,6 @@ if do_preprocessing_train == True:
 
         ## standardize
         for i in range(4):
-            print(i," i")
-            print(stds[i])
 
             if do_norm_std == True:
                 mean  = means[i] / 10000
@@ -175,20 +176,26 @@ if do_preprocessing_train == True:
                 vrt_image[i,:,:] = np.where(vrt_image[i,:,:] < 0, 0, vrt_image[i,:,:]) 
                 vrt_image[i,:,:] = np.where(vrt_image[i,:,:] > 1, 1, vrt_image[i,:,:]) 
 
-        print(vrt_image[0,:,:])
-        print(vrt_image[1,:,:])
-        print(vrt_image[2,:,:])
-        print(vrt_image[3,:,:])
-        print(np.min(vrt_image[:,:,:]))
-        print(np.max(vrt_image[:,:,:]))
+        #print(vrt_image[0,:,:])
+        #print(vrt_image[1,:,:])
+        #print(vrt_image[2,:,:])
+        #print(vrt_image[3,:,:])
+        #print(np.min(vrt_image[:,:,:]))
+        #print(np.max(vrt_image[:,:,:]))
       
-        # %%
+        
         ## safe to floats
-        mem_ds_scene = create_mem_ds(files[0], n_bands = 4, dtype=gdal.GDT_Float32)
+        """mem_ds_scene = create_mem_ds(files[0], n_bands = 4, dtype=gdal.GDT_Float32)
         copy_mem_ds(pth=full_file_path_scenes_out, mem_ds=mem_ds_scene)
         for i in range(4):
             mem_ds_scene.GetRasterBand(i + 1).WriteArray(vrt_image[i])
         del mem_ds_scene
+        """
+        with rio.open(full_file_path_scenes_out, 'w', width = 256, height = 256, count = 4,
+        dtype = rio.float32) as dst:
+            dst.write(vrt_image.squeeze())
+        
+
 
         ## path mask in 
         mask_folder_in  = folder.replace("source", "labels")
@@ -204,37 +211,75 @@ if do_preprocessing_train == True:
 
         ## read and copy mask
         mask = rio.open(f"{full_path_mask_in}/raster_labels.tif").read()
-        mem_ds_mask = create_mem_ds(files[0], n_bands = 1, dtype=gdal.GDT_Int16)
-        copy_mem_ds(pth=mask_file_path_out, mem_ds=mem_ds_mask)
-        for i in range(1):
-            mem_ds_mask.GetRasterBand(i + 1).WriteArray(mask[i])
-        del mem_ds_mask
+      
+        with rio.open(mask_file_path_out, 'w', width = 256, height = 256, count = 1,
+        dtype = rio.int8) as dst:
+            dst.write(mask)
 
         ## get boundary 
         cont     = get_crop(mask.transpose(1,2,0))
 
         # get distance
+
+        print("___________________")
+        print(cont.min())
+        print(cont.max())
         dist = get_distance(cont)
+        print("out_of get distance")
+        print(dist.shape)
+        print(np.min(dist))
+        print(np.max(dist))
         dist = np.nan_to_num(dist) 
+        print("___________________")
+        print("___________________")
+        print(np.min(dist))
+        print(np.max(dist))
+        print(dist[100:120,100:120])
+
+        
 
 
+    
         ## write boundary and dist 
 
-        mem_ds_cont= create_mem_ds(files[0], n_bands = 1, dtype=gdal.GDT_Int16)
+        """mem_ds_cont= create_mem_ds(files[0], n_bands = 1, dtype=gdal.GDT_Int16)
         copy_mem_ds(pth=cont_file_path_out, mem_ds=mem_ds_cont)
         for i in range(1):
-            mem_ds_cont.GetRasterBand(i + 1).WriteArray(cont[-1,:,:])
+            mem_ds_cont.GetRasterBand(i + 1).WriteArray(cont[-1,:,:])"""
 
-        mem_ds_dist= create_mem_ds(files[0], n_bands = 1, dtype=gdal.GDT_Float32)
+        with rio.open(cont_file_path_out, 'w', width = 256, height = 256, count = 1,
+        dtype = rio.int8) as dst:
+            dst.write(cont)
+
+        
+
+        """mem_ds_dist= create_mem_ds(files[0], n_bands = 1, dtype=gdal.GDT_Float32)
         copy_mem_ds(pth=dist_file_path_out, mem_ds=mem_ds_dist)
         for i in range(1):
-            mem_ds_dist.GetRasterBand(i + 1).WriteArray(dist[-1,:,:])
+            mem_ds_dist.GetRasterBand(i + 1).WriteArray(dist[-1,:,:])"""
+        
+        with rio.open(dist_file_path_out, 'w', width = 256, height = 256, count = 1,
+        dtype = rio.float32) as dst:
+            dst.write(dist)
+
+
+        """ print("  full_file_path_scenes_out  ___________")
+        tt = rio.open(cont_file_path_out).read()
+        print(tt.shape)
+        print(tt[0,100:110,100:110])
+        print(tt[0,1:10,1:10])
+        print(np.min(tt))
+        print(np.max(tt))
+
+        print("______________________________")
+        """
+
 
         ## Augmentation
         #original_scene = torch.from_numpy(original_scene)
         #original_mask  = torch.from_numpy(original_mask)
     
-        Augs = [aug_1, aug_2, aug_3, aug_4, aug_5]
+        Augs = [aug_1, aug_2, aug_3, aug_4, aug_5, aug_6]
         for u, aug in enumerate(Augs):
             nn = aug['aug_name']
             print("start augmentation with:", nn)
@@ -312,17 +357,30 @@ if do_preprocessing_train == True:
             copy_mem_ds(full_pth_aug_cont,  mem_img_cont)
             copy_mem_ds(full_pth_aug_dist,  mem_img_dist)
 
+            ## test read
+            tt = rio.open(full_pth_aug_dist).read()
+            print(tt[0,1:10,1:10])
+            print(tt[0,1:10,1:10])
+            print(np.min(tt))
+            print(np.max(tt))
+            print(j)
+            print("______________________________")
+            
+            # %%
+           
+
             scene = scene.numpy()
             mask = mask.numpy()
             cont = cont.numpy()
             dist = dist.numpy()
 
-            print(scene.shape)
-            print(mask.shape)
-            print(cont.shape)
-            print(dist.shape)
+            #print(scene.shape)
+            #print(mask.shape)
+            #print(cont.shape)
+            #print(dist.shape)
 
             ## print plot 
+            u = 1
             if u == 0:
                 fig, axes = plt.subplots(figsize=(8, 8), ncols= 4, nrows= 1 )
                 ax, ax1, ax2, ax3 = axes.flatten()
@@ -337,7 +395,7 @@ if do_preprocessing_train == True:
                 plt.tight_layout()
 
             ploti = False
-            if ploti:
+            if ploti == True:
                 print(type(scene))
                 print(type(mask))
                 print(type(cont))
@@ -357,7 +415,10 @@ if do_preprocessing_train == True:
                 plt.title(nn)
                 plt.show
         
-        
+            
+       
+    
+    
     print("finished training data")
 
 
@@ -429,13 +490,26 @@ if do_preprocessing_test == True:
 
 
         ## safe to floats
-        mem_ds_scene = create_mem_ds(files[0], n_bands = 4, dtype=gdal.GDT_Float32)
+        """mem_ds_scene = create_mem_ds(files[0], n_bands = 4, dtype=gdal.GDT_Float32)
         copy_mem_ds(pth=full_file_path_scenes_out, mem_ds=mem_ds_scene)
         for i in range(4):
             mem_ds_scene.GetRasterBand(i + 1).WriteArray(vrt_image[i])
-        del mem_ds_scene
+        del mem_ds_scene"""
 
-       
+        print(vrt_image.shape)
+        with rio.open(full_file_path_scenes_out, 'w', width = 256, height = 256, count = 4,
+        dtype = rio.float32) as dst:
+            dst.write(vrt_image.squeeze())
+        """
+        ## test 
+        tt = rio.open(full_file_path_scenes_out).read()
+        print(tt[1,1:10,1:10])
+        print(tt[1,1:10,1:10])
+        print(np.min(tt))
+        print(np.max(tt))
+        print(j)"""
+        print("_____________________________________________________-")
+       # %%
 print("finished all... ")
  
 

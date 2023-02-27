@@ -3,6 +3,7 @@ import torch
 import os
 from torch.utils.data import DataLoader
 from utils.data_sets import DatasetImageMaskContourDist_test
+from utils.general_utils import strFilter
 import glob
 from models.BsiNet import BsiNet_2, BsiNet
 from tqdm import tqdm
@@ -23,37 +24,34 @@ def build_model(model_type):
 
     return model
 
-def strFilter(string, substr):
-    return [str for str in string if
-             any(sub in str for sub in substr)]
-
 
 
 if __name__ == "__main__":
 
     args = argparse.ArgumentParser(description="test setup for segmentation test")
-    args.save_path_predictions = '/home/hemmerling/projects/field_delination_BsiNet/models_safe/predictions/'
-    args.save_path_model = '/home/hemmerling/projects/field_delination_BsiNet/models_safe/'
     
-    args.model_file = os.path.join(args.save_path_model, "30" + ".pt")
+    args.save_path_model = '/home/hemmerling/projects/field_delination_BsiNet/models_safe/'
+    args.test_path = '/home/hemmerling/projects/field_delination_BsiNet/data_preprocessed/test/image/'
+    
+    args.model_file = "/home/hemmerling/projects/field_delination_BsiNet/models_safe/bsinet_2_bathsize_10_num_epochs_31_ntry_1_nepoch_10.pt"
  
     args.model_type = 'bsinet_2'
+    args.output_folder_name = 'test_1'
     args.distance_type = 'dist_contour'
-    args.test_path = '/home/hemmerling/projects/field_delination_BsiNet/data_preprocessed/test/image/'
+    
 
-
-    test_path = os.path.join(args.test_path)
+    args.save_path_predictions = f"/home/hemmerling/projects/field_delination_BsiNet/models_safe/predictions/{args.model_type}_{args.output_folder_name}/"
+    test_path = args.test_path
     model_file = args.model_file
     save_path_model  = args.save_path_model
     save_path_predictions  = args.save_path_predictions
 
     model_type = args.model_type
-    print(model_file)
 
     device = torch.device("cuda")
-
     test_file_names = [f for f in os.listdir(test_path) if f.endswith('.tif')]
-   
+  
+    # %%
 
     valLoader = DataLoader(DatasetImageMaskContourDist_test(dir = args.test_path,file_names = test_file_names, distance_type= args.distance_type))
 
@@ -67,19 +65,58 @@ if __name__ == "__main__":
     model.eval()
 
     # %%
+    z = 0
     for i, (img_file_name, inputs) in enumerate(
         tqdm(valLoader)
     ):
         print(i)
+        print("LOOOOOOOOOOOO")
+        print(img_file_name)
+        print(inputs.shape)
+        print(inputs[0,1,1:10,1:10])
+        print(torch.min(inputs))
+        print(torch.max(inputs))
+        print(inputs.dtype)
+        print("___________________")
         inputs = inputs.to(device)
+        print(img_file_name)
+
+        
+    
+        """tt = rio.open(f"{args.test_path}{img_file_name[0]}", dtype= rio.float32).read()
+        print(np.min(tt))
+        print(np.max(tt))
+        tt[1,1:10,1:10]"""
+
+        
+        
         outputs1, outputs2, outputs3 = model(inputs)
+
+        print("____________________________________________")
+        print("outputs")
+
         print(outputs1.dtype)
         print(outputs1.shape)
 
-        print(outputs1[0,0,1:10,1:10])
-        print(outputs1[0,1,1:10,1:10])
+        #print(outputs1[0,0,1:10,1:10])
+        #print(outputs1[0,1,1:10,1:10])
 
+        print("outputs 1 min max")
+        print(z)
         print(torch.max(outputs1[0,0,:,:]))
+        if z == 0:
+            safe_max_1 = torch.max(outputs1[0,0,:,:]).cpu().detach().flatten().numpy()
+            safe_min_1 = torch.max(outputs1[0,0,:,:]).cpu().detach().flatten().numpy()
+            safe_max_11 = torch.max(outputs1[0,1,:,:]).cpu().detach().flatten().numpy()
+            safe_min_11 = torch.max(outputs1[0,1,:,:]).cpu().detach().flatten().numpy()
+
+        if z != 0:
+            safe_max_1 = np.append(safe_max_1, torch.max(outputs1[0,0,:,:]).cpu().detach().flatten().numpy())
+            safe_min_1 = np.append(safe_min_1, torch.max(outputs1[0,0,:,:]).cpu().detach().flatten().numpy())
+            safe_max_11 = np.append(safe_max_11, torch.max(outputs1[0,0,:,:]).cpu().detach().flatten().numpy())
+            safe_min_11 = np.append(safe_min_11, torch.max(outputs1[0,0,:,:]).cpu().detach().flatten().numpy())
+
+
         print(torch.min(outputs1[0,0,:,:]))
 
         print(torch.max(outputs1[0,1,:,:]))
@@ -90,7 +127,13 @@ if __name__ == "__main__":
         #print(outputs1[0,1:10,1:10])
         #print(outputs1[1,1:10,1:10])
 
-       
+        z = z + 1 
+ 
+        print("results")
+        print(safe_max_1)
+        print(safe_min_1)
+        print(safe_max_11)
+        print(safe_min_11)
       
         # %%
 

@@ -4,7 +4,7 @@ from scipy.ndimage import gaussian_filter
 from pathlib import Path
 import rasterio as rio
 import torch
-import matplotlib as plt
+import matplotlib.pyplot as plt
 import torchvision
 import random
 import torch 
@@ -331,8 +331,14 @@ def get_crop(image, kernel_size = (3,3)):
 
 def get_distance(label):
 
-    tlabel = label.transpose(1,2,0).astype(np.uint8)
+    tlabel = label.transpose(1,2,0).astype(np.uint8) 
+    _, thresh = cv2.threshold(tlabel,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+    #tlabel = label.astype(np.uint8)
 
+    """print("_______________________")
+    print(" ## inside dist fun")
+    print(tlabel.min())
+    print(tlabel.max())"""
  
     dist = cv2.distanceTransform(tlabel,
                                  cv2.DIST_L1,
@@ -340,17 +346,55 @@ def get_distance(label):
 
     dist = dist[:,:,np.newaxis]
 
+    """print("_______________________")
+
+    print(dist.min())
+    print(dist.max())
+    print(len(dist))
+    """
+
+    fig, axes = plt.subplots(figsize=(8, 8), ncols= 3, nrows= 1 )
+    ax, ax1, ax2= axes.flatten()
+   
+    ax.imshow(dist)
+   
     # get unique objects
-    output = cv2.connectedComponentsWithStats(label.transpose(1,2,0), 4, cv2.CV_32S)
+    thresh = thresh[:,:,np.newaxis]
+    
+
+    """print(type(thresh))
+    print(thresh.dtype)
+    print(np.min(thresh))
+    print(np.max(thresh))
+    print(thresh.shape)"""
+    output = cv2.connectedComponentsWithStats(thresh, 4, cv2.CV_8U)
 
 
     num_objects = output[0]
     labels = output[1]
+    """print(type(labels))
+    print(labels.shape)
+    print(labels[1:40,1:40])
+    print(range(num_objects))
+
+    ax1.imshow(labels)
+             """
+               
+
+
+
+    #print(labels.min())
+    #print(labels.max())
+    #print(len(labels))
     
     # min/max normalize dist for each object
     for l in range(num_objects):
       dist[labels==l] = (dist[labels==l]) / (dist[labels==l].max())
 
+    #ax2.imshow(dist)
+             
+               
+    #plt.show
     return dist[np.newaxis,:,:,-1]
 
 # %%

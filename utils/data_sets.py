@@ -88,6 +88,11 @@ class DatasetImageMaskContourDist(Dataset):
         contour = load_contour(os.path.join(self.dir,img_file_name+'.tif'))
         dist =    load_distance(os.path.join(self.dir,img_file_name+'.tif'), self.distance_type)
 
+        #print(image[0,1:10,1:10])
+        #print(mask[0,1:10,1:10])
+        #print(contour[0,1:10,1:10])
+        #print(dist)
+
         return img_file_name, image, mask, contour, dist
 
 
@@ -106,7 +111,7 @@ class DatasetImageMaskContourDist_test(Dataset):
     def __getitem__(self, idx):
 
         img_file_name = self.file_names[idx]
-        image =   load_image(os.path.join(self.dir,img_file_name))
+        image =    load_image(os.path.join(self.dir,img_file_name))
         #mask =    load_mask(os.path.join(self.dir,img_file_name+'.tif'))
         #contour = load_contour(os.path.join(self.dir,img_file_name+'.tif'))
         #dist =    load_distance(os.path.join(self.dir,img_file_name+'.tif'), self.distance_type)
@@ -118,8 +123,6 @@ def load_image(path):
 
     img = rio.open(path).read()
 
-    #print("ww")
-    #print(img[1,1:10,1:10])
 
     """data_transforms = transforms.Compose(
         [
@@ -129,8 +132,11 @@ def load_image(path):
 
         ]
     )"""
-    #img = torch.tensor(img, dtype=torch.float)
-    img = torch.tensor(img)
+    #print("loading_image")
+    #print(np.min(img))
+    #print(np.max(img))
+    img = torch.tensor(img, dtype=torch.float)
+    # img = torch.tensor(img)
 
 
     return img
@@ -154,6 +160,14 @@ def load_contour(path):
     contour[contour ==255] = 1
     contour[contour == 0] = 0
 
+    """print("__________________________________________________")
+    print("__________________________________________________")
+    print("cont check ")
+
+    print(np.min(contour))
+    print(np.max(contour))
+    print(contour[0,100:120,110:130])"""
+
     return torch.from_numpy(np.expand_dims(contour, 0)).long()
 
 
@@ -164,8 +178,12 @@ def load_distance(path, distance_type):
         dist = cv2.imread(path)
 
     if distance_type == "dist_contour":
+
+        #print("______________________________________")
+        #print("reading distance")
         path = path.replace("image", "dist")
         dist = rio.open(path).read()
+        
 
     if distance_type == "dist_contour_tif":
         dist = cv2.imread(path.replace("image", "dist_contour_tif"), 0)

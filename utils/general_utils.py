@@ -6,6 +6,15 @@ import torchvision
 from torch.nn import functional as F
 import time
 import argparse
+import torch.nn as nn
+from utils.losses import dice_loss
+from utils.losses import LossBsiNet
+
+
+def strFilter(string, substr):
+    return [str for str in string if
+             any(sub in str for sub in substr)]
+
 
 # %%
 def evaluate(device, epoch, model, data_loader, writer):
@@ -16,18 +25,34 @@ def evaluate(device, epoch, model, data_loader, writer):
 
         for iter, data in enumerate(tqdm(data_loader)):
 
-            _, inputs, targets, _,_ = data
-            inputs = inputs.to(device)
-            targets = targets.to(device)
+            _, inputs, targets_1, targets_2,targets_3 = data
+            inputs  = inputs.to(device)
+            targets_1 = targets_1.to(device)
+            targets_2 = targets_2.to(device)
+            targets_3 = targets_3.to(device)
             outputs = model(inputs)
-            #print("ee")
-            #print(outputs[0].shape)
+            #print("_________________________-")
+            #print("inside val loss ")
+            #print(len(outputs))
+            #print(len(targets_1))
+
+            criterion = LossBsiNet([1,1,1], device=device)
+            loss = criterion(
+                outputs[0], outputs[1], outputs[2], targets_1, targets_2, targets_3, epoch, writer
+            )
+
+            #print(outputs[0].size())
+            #print(targets[0].size())
+        
             #print(targets.squeeze(1).shape)
             #print(targets[:,-1,:,:].squeeze(1).shape)
-            loss = F.nll_loss(outputs[0], targets[:,-1,:,:].squeeze(1))
+            #loss = dice_loss(outputs[0], targets[0]) #.squeeze(1))
+            #loss_fun = nn.BCEWithLogitsLoss()
+            #loss = loss_fun(outputs[0].flatten(), targets[0].flatten().float())
+            print("val loss: ", loss)
             losses.append(loss.item())
 
-        writer.add_scalar("Dev_Loss", np.mean(losses), epoch)
+        writer.add_scalar("Val_Loss", np.mean(losses), epoch)
 
     return np.mean(losses), time.perf_counter() - start
 
@@ -36,43 +61,117 @@ def visualize(device, epoch, model, data_loader, writer, val_batch_size, train=T
     def save_image(image, tag, val_batch_size):
         from PIL import Image
      
+        #print("______________________________")
+        #print("inside visualize", tag)
+        #print(image.shape)
+        #image = image[-1,-1,:,: ]#.permute(1,2,0)
+        #print("shape: ",image.shape)
+        #print(image.min())
+        #print(image.max())
+        #print(type(image))
+        #print(image.dtype())
+
+        #print(image[1,0,0,1:10,1:10])
+        
+        
+        
+        #image  = image * 255 ## evtl nonsense
+
+        #print("after norm")
+        #print(image.min())
+        #print(image.max()) # 4D mini-batch Tensor of shape (B x C x H x W)
+        
+        #grid = torchvision.utils.make_grid(
+        #    image * 255, nrow=int(np.sqrt(val_batch_size)), pad_value=0, padding=25
+        #)
+        #print(grid)
+        if tag == "Target":
+            
+            #print("###########################")
+            #print("inside target:")
+            #print(image.shape)
 
         
-        #print(image.shape)
-        image = image[-1,-1,:,: ]#.permute(1,2,0)
-        #print(image.shape)
-        #print(image.min())
-        #print(image.max())
-        image -= image.min()
-        image /= image.max()
-        image  = image * 255 ## evtl nonsense
-        #print(image.min())
-        #print(image.max())
-        grid = torchvision.utils.make_grid(
-            image * 255, nrow=int(np.sqrt(val_batch_size)), pad_value=0, padding=25
-        )
-        writer.add_image(tag, grid, epoch)
+          
+            image_s = image[0]
+            #image -= image.min()
+            #image /= image.max()
+           
+            image_s = image_s.astype(float)
+            cont = image[1]
+            dist = image[2]
+            #print(image_s.shape)
+            #print(cont.shape)
+            #print(dist.shape)
+            #print(len(image))
+            #print("shape of target:", dist.shape)
+            #print("min of target:", dist.min())
+            #print("max of target:", dist.max())
+            #print(image[100:110,100:110])
+            writer.add_image(tag, image_s[0,0,:,:], epoch, dataformats='CHW')
+            writer.add_image("Ref_contour", cont[0,0,:,:] , epoch, dataformats='CHW')
+            writer.add_image("REf_dist", dist[0,0,:,:], epoch, dataformats='HW')
 
+       
+        if tag == "Input":
+            image = image.astype(float)
+            writer.add_image(tag, image[0,:,:,:], epoch, dataformats='CHW')
+        if tag == "Prediction_dist":
+            image = image.astype(float)
+            image -= image.min()
+            image /= image.max()
+            writer.add_image(tag, image[0,-1,:,:], epoch, dataformats='HW')
+        
+        if tag == "Prediction_cont":
+            image = image.astype(float)
+            image -= image.min()
+            image /= image.max()
+            
+            writer.add_image(tag, image[0,-1,:,:], epoch, dataformats='HW')
+    
+        if tag == "Prediction_mask":
+            image = image.astype(float)
+            image -= image.min()
+            image /= image.max()
+            writer.add_image("prediction mask binary", np.where(image[0,-1,:,:]> 0.5,1,0), epoch, dataformats='HW')
+            writer.add_image(tag, image[0,-1,:,:], epoch, dataformats='HW')
+       
     model.eval()
     with torch.no_grad():
         for iter, data in enumerate(tqdm(data_loader)):
-            _, inputs, targets, _,_ = data
+            _, inputs, targets_1, targets_2, targets_3 = data
 
             inputs = inputs.to(device)
-
-            targets = targets.to(device)
+            targets_1 = targets_1.detach().cpu().numpy()
+            targets_2 = targets_2.detach().cpu().numpy()
+            targets_3 = targets_3.detach().cpu().numpy()
+            
             outputs = model(inputs)
+            #print("!! went through model")
+            #print(len(outputs))
+            #print(outputs[0].shape)
+            #print(outputs[1].shape)
+            #print(outputs[2].shape)
+
 
             output_mask = outputs[0].detach().cpu().numpy()
-            output_final = np.argmax(output_mask, axis=1).astype(float)
-            output_final = torch.from_numpy(output_final).unsqueeze(1)
+            output_cont = outputs[1].detach().cpu().numpy()
+            output_dist = outputs[2].detach().cpu().numpy()
 
-            if train == "True":
-                save_image(targets.float(), "Target_train",val_batch_size)
-                save_image(output_final, "Prediction_train",val_batch_size)
-            else:
-                save_image(targets.float(), "Target", val_batch_size)
-                save_image(output_final, "Prediction", val_batch_size)
+
+            #output_final = np.argmax(output_mask, axis=1).astype(float)
+            #output_final = torch.from_numpy(output_final).unsqueeze(1)
+
+            #if train == "True":
+                #save_image(targets, "Target_train", val_batch_size)
+                #save_image(output_final, "Prediction_train",val_batch_size)
+            
+            save_image(inputs.detach().cpu().numpy(), "Input", val_batch_size)
+            save_image([targets_1, targets_2, targets_3], "Target", val_batch_size)
+            save_image(output_mask, "Prediction_mask", val_batch_size)
+            save_image(output_cont, "Prediction_cont", val_batch_size)
+            save_image(output_dist, "Prediction_dist", val_batch_size)
+
 
             break
 
@@ -159,7 +258,7 @@ def create_mem_ds(ref_pth, n_bands, dtype=gdal.GDT_Float32):
 
 # create copy
 def copy_mem_ds(pth, mem_ds):
-  copy_ds = gdal.GetDriverByName("GTiff").CreateCopy(pth, mem_ds, 0, options=['COMPRESS=LZW'])
+  copy_ds = gdal.GetDriverByName("GTiff").CreateCopy(pth, mem_ds, 0) #, options=['COMPRESS=LZW'])
   copy_ds = None
 
   
